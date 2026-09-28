@@ -36,6 +36,43 @@ def readTotalTimeFromFile():
         writer = csv.writer(backupfile, delimiter=',')
         writer.writerows(db)
         
+def printStatsByDay():
+    if db == []:
+        print('No valid database has been loaded')
+        return
+    
+    number_of_days = 0
+    total_time = 0
+
+    print()    
+    print('Time distribution by days:')
+    
+    db_per_day = dict()
+    for row in db[1:]:
+        day = str(datetime.datetime.fromisoformat(row[0]).date())
+        if db_per_day.get(day,None) != None:
+            db_per_day[day] += float(row[2])
+        else:
+            number_of_days += 1
+            db_per_day[day] = float(row[2])
+    for day,seconds in db_per_day.items():
+        day_delta = datetime.timedelta(seconds = seconds)
+        print(day + ": " + str(day_delta))
+        total_time += seconds
+        
+    print()
+    print('Total number of days worked: ' + str(number_of_days))
+    print('Total number of hours worked: ' + str(datetime.timedelta(seconds=total_time)))
+    print('Hours that should have worked so far (assuming 4 hours per day): ' + str(number_of_days * 4))
+    expected_seconds = number_of_days*4*60*60
+    if expected_seconds > total_time:
+        print('Behind expected hours by: ' + str(datetime.timedelta(seconds = expected_seconds - total_time)))
+    elif expected_seconds < total_time:
+        print('Ahead of expected hours by: ' + str(datetime.timedelta(seconds = total_time - expected_seconds)))
+    else:
+        print('Impossible! You\'re exactly correct!')
+    print()
+        
 def countThread():
     global current_row
     global current_time
@@ -115,10 +152,19 @@ def csvThread():
 def main():
     global current_row
     os.system("cls")
+    
     print('Starting Time logger')
 
     readTotalTimeFromFile()
     
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "-stats":
+            printStatsByDay()
+            sys.exit(0)
+        else:
+            print('Unknown parameter')
+            sys.exit(1)
+
     while(True):
         timer_thread = threading.Thread(target=countThread)
         csv_thread = threading.Thread(target=csvThread)
